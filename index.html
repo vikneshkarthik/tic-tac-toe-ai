@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X-O Game</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&amp;family=Outfit:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Outfit', sans-serif; }
+    .mono { font-family: 'Space Mono', monospace; }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes drawX {
+      from { stroke-dashoffset: 100; }
+      to { stroke-dashoffset: 0; }
+    }
+    
+    @keyframes drawO {
+      from { stroke-dashoffset: 188; }
+      to { stroke-dashoffset: 0; }
+    }
+    
+    @keyframes winPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+    }
+    
+    .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+    .animate-scale-in { animation: scaleIn 0.4s ease-out forwards; }
+    .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+    .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+    
+    .cell-x svg line {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: drawX 0.3s ease-out forwards;
+    }
+    
+    .cell-o svg circle {
+      stroke-dasharray: 188;
+      stroke-dashoffset: 188;
+      animation: drawO 0.4s ease-out forwards;
+    }
+    
+    .winning-cell {
+      animation: winPulse 0.8s ease-in-out infinite;
+    }
+    
+    .grid-line {
+      background: linear-gradient(90deg, transparent, currentColor, transparent);
+    }
+    
+    .game-cell {
+      transition: all 0.2s ease;
+    }
+    
+    .game-cell:hover:not(.filled) {
+      background: rgba(99, 102, 241, 0.1);
+    }
+    
+    .btn-primary {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .btn-primary:hover::before {
+      left: 100%;
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto" style="background: #0f0f1a;"><!-- Home Screen -->
+   <div id="home-screen" class="h-full flex flex-col items-center justify-center p-6">
+    <div class="text-center animate-fade-in"><!-- Logo -->
+     <div class="mb-8">
+      <div class="inline-flex items-center gap-4 mb-4">
+       <svg class="w-16 h-16" viewbox="0 0 60 60" fill="none"><line x1="10" y1="10" x2="50" y2="50" stroke="#6366f1" stroke-width="6" stroke-linecap="round" /> <line x1="50" y1="10" x2="10" y2="50" stroke="#6366f1" stroke-width="6" stroke-linecap="round" />
+       </svg><span class="text-5xl font-light" style="color: #e2e8f0;">—</span>
+       <svg class="w-16 h-16" viewbox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="22" stroke="#f472b6" stroke-width="6" fill="none" />
+       </svg>
+      </div>
+     </div>
+     <h1 id="game-title" class="mono text-4xl md:text-5xl font-bold mb-3" style="color: #f8fafc;">TIC TAC TOE</h1>
+     <p class="text-lg mb-12" style="color: #94a3b8;">Player vs AI Challenge</p><!-- Game Mode Info -->
+     <div class="flex flex-col sm:flex-row gap-6 justify-center mb-12">
+      <div class="px-6 py-4 rounded-2xl" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3);">
+       <div class="flex items-center gap-3">
+        <svg class="w-8 h-8" viewbox="0 0 40 40" fill="none"><line x1="8" y1="8" x2="32" y2="32" stroke="#6366f1" stroke-width="4" stroke-linecap="round" /> <line x1="32" y1="8" x2="8" y2="32" stroke="#6366f1" stroke-width="4" stroke-linecap="round" />
+        </svg>
+        <div class="text-left">
+         <p class="text-sm" style="color: #94a3b8;">You Play</p>
+         <p class="font-semibold" style="color: #6366f1;">X (First Move)</p>
+        </div>
+       </div>
+      </div>
+      <div class="px-6 py-4 rounded-2xl" style="background: rgba(244, 114, 182, 0.1); border: 1px solid rgba(244, 114, 182, 0.3);">
+       <div class="flex items-center gap-3">
+        <svg class="w-8 h-8" viewbox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="12" stroke="#f472b6" stroke-width="4" fill="none" />
+        </svg>
+        <div class="text-left">
+         <p class="text-sm" style="color: #94a3b8;">AI Plays</p>
+         <p class="font-semibold" style="color: #f472b6;">O (Smart AI)</p>
+        </div>
+       </div>
+      </div>
+     </div><!-- Start Button --> <button id="start-btn" onclick="startGame()" class="btn-primary px-12 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl animate-pulse-slow" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);"> Start Game </button> <!-- Tech Badge -->
+     <div class="mt-16 flex items-center justify-center gap-2" style="color: #475569;">
+      <svg class="w-4 h-4" fill="currentColor" viewbox="0 0 20 20"><path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
+      </svg><span class="text-sm">Minimax AI Algorithm</span>
+     </div>
+    </div>
+   </div><!-- Game Screen -->
+   <div id="game-screen" class="h-full flex flex-col items-center justify-center p-6 hidden">
+    <div class="w-full max-w-md animate-fade-in"><!-- Status Bar -->
+     <div class="flex items-center justify-between mb-8"><button onclick="goHome()" class="flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:bg-white/5" style="color: #94a3b8;">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+       </svg><span class="text-sm">Back</span> </button>
+      <div id="turn-indicator" class="flex items-center gap-2 px-4 py-2 rounded-xl" style="background: rgba(99, 102, 241, 0.2);"><span class="text-sm" style="color: #e2e8f0;">Your Turn</span>
+      </div>
+     </div><!-- Game Board -->
+     <div class="relative p-1 rounded-3xl mb-8" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(244, 114, 182, 0.3));">
+      <div class="rounded-3xl p-6" style="background: #1a1a2e;">
+       <div id="game-board" class="grid grid-cols-3 gap-3"><!-- Cells will be generated by JS -->
+       </div>
+      </div>
+     </div><!-- Score Display -->
+     <div class="flex justify-center gap-8 text-center">
+      <div class="px-6 py-3 rounded-xl" style="background: rgba(99, 102, 241, 0.1);">
+       <p class="text-xs mb-1" style="color: #94a3b8;">Player (X)</p>
+       <p id="player-score" class="text-2xl font-bold mono" style="color: #6366f1;">0</p>
+      </div>
+      <div class="px-6 py-3 rounded-xl" style="background: rgba(100, 116, 139, 0.1);">
+       <p class="text-xs mb-1" style="color: #94a3b8;">Draws</p>
+       <p id="draw-score" class="text-2xl font-bold mono" style="color: #64748b;">0</p>
+      </div>
+      <div class="px-6 py-3 rounded-xl" style="background: rgba(244, 114, 182, 0.1);">
+       <p class="text-xs mb-1" style="color: #94a3b8;">AI (O)</p>
+       <p id="ai-score" class="text-2xl font-bold mono" style="color: #f472b6;">0</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- Result Screen -->
+   <div id="result-screen" class="h-full flex flex-col items-center justify-center p-6 hidden">
+    <div class="text-center animate-scale-in"><!-- Result Icon -->
+     <div id="result-icon" class="mb-8"><!-- Dynamic icon -->
+     </div>
+     <h2 id="result-title" class="text-4xl md:text-5xl font-bold mb-4" style="color: #f8fafc;">You Win!</h2>
+     <p id="result-message" class="text-lg mb-12" style="color: #94a3b8;">Congratulations! You beat the AI.</p><!-- Action Buttons -->
+     <div class="flex flex-col sm:flex-row gap-4 justify-center"><button id="play-again-btn" onclick="startGame()" class="btn-primary px-10 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #ffffff; box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);"> Play Again </button> <button onclick="goHome()" class="px-10 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105" style="background: rgba(255, 255, 255, 0.1); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.2);"> Home </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Game State
+    let board = ['', '', '', '', '', '', '', '', ''];
+    let gameActive = false;
+    let scores = { player: 0, ai: 0, draw: 0 };
+    
+    // Winning combinations
+    const winPatterns = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+      [0, 4, 8], [2, 4, 6] // Diagonals
+    ];
+    
+    // Default config
+    const defaultConfig = {
+      game_title: 'TIC TAC TOE',
+      start_button_text: 'Start Game',
+      play_again_text: 'Play Again',
+      background_color: '#0f0f1a',
+      surface_color: '#1a1a2e',
+      text_color: '#f8fafc',
+      primary_color: '#6366f1',
+      secondary_color: '#f472b6',
+      font_family: 'Outfit',
+      font_size: 16
+    };
+    
+    // Initialize Element SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          // Update text content
+          document.getElementById('game-title').textContent = config.game_title || defaultConfig.game_title;
+          document.getElementById('start-btn').textContent = config.start_button_text || defaultConfig.start_button_text;
+          document.getElementById('play-again-btn').textContent = config.play_again_text || defaultConfig.play_again_text;
+          
+          // Update colors
+          const bgColor = config.background_color || defaultConfig.background_color;
+          const surfaceColor = config.surface_color || defaultConfig.surface_color;
+          const textColor = config.text_color || defaultConfig.text_color;
+          const primaryColor = config.primary_color || defaultConfig.primary_color;
+          const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+          
+          document.getElementById('app').style.background = bgColor;
+          document.querySelectorAll('[data-surface]').forEach(el => el.style.background = surfaceColor);
+          document.getElementById('game-title').style.color = textColor;
+          
+          // Update font
+          const fontFamily = config.font_family || defaultConfig.font_family;
+          const fontSize = config.font_size || defaultConfig.font_size;
+          document.body.style.fontFamily = `${fontFamily}, Outfit, sans-serif`;
+          document.body.style.fontSize = `${fontSize}px`;
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); }
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); }
+            },
+            {
+              get: () => config.primary_color || defaultConfig.primary_color,
+              set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); }
+            },
+            {
+              get: () => config.secondary_color || defaultConfig.secondary_color,
+              set: (v) => { config.secondary_color = v; window.elementSdk.setConfig({ secondary_color: v }); }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['game_title', config.game_title || defaultConfig.game_title],
+          ['start_button_text', config.start_button_text || defaultConfig.start_button_text],
+          ['play_again_text', config.play_again_text || defaultConfig.play_again_text]
+        ])
+      });
+    }
+    
+    // Screen Navigation
+    function showScreen(screenId) {
+      document.querySelectorAll('#home-screen, #game-screen, #result-screen').forEach(screen => {
+        screen.classList.add('hidden');
+      });
+      document.getElementById(screenId).classList.remove('hidden');
+    }
+    
+    function goHome() {
+      showScreen('home-screen');
+    }
+    
+    // Initialize Game Board
+    function initBoard() {
+      const boardEl = document.getElementById('game-board');
+      boardEl.innerHTML = '';
+      
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'game-cell aspect-square rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200';
+        cell.style.background = 'rgba(255, 255, 255, 0.03)';
+        cell.dataset.index = i;
+        cell.onclick = () => handleCellClick(i);
+        boardEl.appendChild(cell);
+      }
+    }
+    
+    // Start Game
+    function startGame() {
+      board = ['', '', '', '', '', '', '', '', ''];
+      gameActive = true;
+      initBoard();
+      updateTurnIndicator('Your Turn', true);
+      showScreen('game-screen');
+    }
+    
+    // Handle Cell Click
+    function handleCellClick(index) {
+      if (!gameActive || board[index] !== '') return;
+      
+      makeMove(index, 'X');
+      
+      if (checkGameEnd()) return;
+      
+      // AI Turn
+      gameActive = false;
+      updateTurnIndicator('AI Thinking...', false);
+      
+      setTimeout(() => {
+        const aiMove = getBestMove();
+        if (aiMove !== -1) {
+          makeMove(aiMove, 'O');
+          checkGameEnd();
+        }
+        if (gameActive) {
+          updateTurnIndicator('Your Turn', true);
+        }
+      }, 500);
+    }
+    
+    // Make Move
+    function makeMove(index, player) {
+      board[index] = player;
+      const cell = document.querySelector(`[data-index="${index}"]`);
+      cell.classList.add('filled', player === 'X' ? 'cell-x' : 'cell-o');
+      
+      if (player === 'X') {
+        cell.innerHTML = `
+          <svg class="w-12 h-12 md:w-16 md:h-16" viewBox="0 0 60 60" fill="none">
+            <line x1="15" y1="15" x2="45" y2="45" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
+            <line x1="45" y1="15" x2="15" y2="45" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+        `;
+      } else {
+        cell.innerHTML = `
+          <svg class="w-12 h-12 md:w-16 md:h-16" viewBox="0 0 60 60" fill="none">
+            <circle cx="30" cy="30" r="18" stroke="#f472b6" stroke-width="6" fill="none"/>
+          </svg>
+        `;
+      }
+      
+      gameActive = true;
+    }
+    
+    // Update Turn Indicator
+    function updateTurnIndicator(text, isPlayer) {
+      const indicator = document.getElementById('turn-indicator');
+      indicator.innerHTML = `<span class="text-sm" style="color: #e2e8f0;">${text}</span>`;
+      indicator.style.background = isPlayer ? 'rgba(99, 102, 241, 0.2)' : 'rgba(244, 114, 182, 0.2)';
+    }
+    
+    // Check Winner
+    function checkWinner() {
+      for (const pattern of winPatterns) {
+        const [a, b, c] = pattern;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return { winner: board[a], pattern };
+        }
+      }
+      return null;
+    }
+    
+    // Check Game End
+    function checkGameEnd() {
+      const result = checkWinner();
+      
+      if (result) {
+        gameActive = false;
+        highlightWinningCells(result.pattern);
+        
+        setTimeout(() => {
+          if (result.winner === 'X') {
+            scores.player++;
+            showResult('win');
+          } else {
+            scores.ai++;
+            showResult('lose');
+          }
+          updateScores();
+        }, 800);
+        return true;
+      }
+      
+      if (!board.includes('')) {
+        gameActive = false;
+        scores.draw++;
+        setTimeout(() => {
+          showResult('draw');
+          updateScores();
+        }, 500);
+        return true;
+      }
+      
+      return false;
+    }
+    
+    // Highlight Winning Cells
+    function highlightWinningCells(pattern) {
+      pattern.forEach(index => {
+        const cell = document.querySelector(`[data-index="${index}"]`);
+        cell.classList.add('winning-cell');
+      });
+    }
+    
+    // Update Scores
+    function updateScores() {
+      document.getElementById('player-score').textContent = scores.player;
+      document.getElementById('ai-score').textContent = scores.ai;
+      document.getElementById('draw-score').textContent = scores.draw;
+    }
+    
+    // Show Result
+    function showResult(type) {
+      const iconEl = document.getElementById('result-icon');
+      const titleEl = document.getElementById('result-title');
+      const messageEl = document.getElementById('result-message');
+      
+      if (type === 'win') {
+        iconEl.innerHTML = `
+          <div class="w-32 h-32 mx-auto rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1)); border: 2px solid rgba(34, 197, 94, 0.3);">
+            <svg class="w-16 h-16" fill="none" stroke="#22c55e" viewBox="0 0 24 24" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+        `;
+        titleEl.textContent = 'You Win!';
+        titleEl.style.color = '#22c55e';
+        messageEl.textContent = 'Congratulations! You beat the AI.';
+      } else if (type === 'lose') {
+        iconEl.innerHTML = `
+          <div class="w-32 h-32 mx-auto rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, rgba(244, 114, 182, 0.2), rgba(236, 72, 153, 0.1)); border: 2px solid rgba(244, 114, 182, 0.3);">
+            <svg class="w-16 h-16" viewBox="0 0 60 60" fill="none">
+              <circle cx="30" cy="30" r="18" stroke="#f472b6" stroke-width="5" fill="none"/>
+            </svg>
+          </div>
+        `;
+        titleEl.textContent = 'AI Wins!';
+        titleEl.style.color = '#f472b6';
+        messageEl.textContent = 'The AI outsmarted you this time.';
+      } else {
+        iconEl.innerHTML = `
+          <div class="w-32 h-32 mx-auto rounded-full flex items-center j
