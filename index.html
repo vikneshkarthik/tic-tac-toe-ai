@@ -3,52 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>X-O Game</title>
+  <title>Tic Tac Toe – Hard AI</title>
 
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Fonts -->
+  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 
   <style>
     * { font-family: 'Outfit', sans-serif; }
     .mono { font-family: 'Space Mono', monospace; }
-    .game-cell:hover:not(.filled) { background: rgba(99,102,241,.15); }
-    .winning-cell { animation: pulse 1s infinite; }
-
-    @keyframes pulse {
-      0%,100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-    }
+    .cell:hover:not(.filled) { background: rgba(99,102,241,.2); }
   </style>
 </head>
 
 <body class="h-full bg-[#0f0f1a] text-white">
 
-<div id="app" class="h-full flex items-center justify-center">
+<div class="h-full flex items-center justify-center">
 
 <!-- HOME -->
-<div id="home-screen" class="text-center">
+<div id="home" class="text-center">
   <h1 class="mono text-5xl mb-3">TIC TAC TOE</h1>
-  <p class="text-gray-400 mb-10">Player vs AI</p>
-  <button onclick="startGame()" class="px-10 py-4 rounded-full bg-indigo-500 hover:scale-105 transition">
+  <p class="text-gray-400 mb-8">Player vs AI (Hard)</p>
+  <button onclick="startGame()" class="px-10 py-4 bg-indigo-500 rounded-full hover:scale-105 transition">
     Start Game
   </button>
 </div>
 
 <!-- GAME -->
-<div id="game-screen" class="hidden text-center">
-  <p id="turn-indicator" class="mb-6 text-lg">Your Turn (X)</p>
-
-  <div id="game-board" class="grid grid-cols-3 gap-3 mb-6"></div>
-
-  <button onclick="goHome()" class="text-sm text-gray-400 underline">Back</button>
+<div id="game" class="hidden text-center">
+  <p id="turn" class="mb-5 text-lg">Your Turn (X)</p>
+  <div id="board" class="grid grid-cols-3 gap-3 mb-6"></div>
+  <button onclick="goHome()" class="text-gray-400 underline">Back</button>
 </div>
 
 <!-- RESULT -->
-<div id="result-screen" class="hidden text-center">
-  <h2 id="result-title" class="text-4xl font-bold mb-6"></h2>
+<div id="result" class="hidden text-center">
+  <h2 id="resultText" class="text-4xl font-bold mb-6"></h2>
   <button onclick="startGame()" class="px-8 py-3 bg-indigo-500 rounded-full">
     Play Again
   </button>
@@ -57,8 +49,7 @@
 </div>
 
 <script>
-/* ---------------- GAME LOGIC ---------------- */
-
+/* ---------------- VARIABLES ---------------- */
 let board = ["","","","","","","","",""];
 let gameActive = true;
 
@@ -68,81 +59,131 @@ const winPatterns = [
   [0,4,8],[2,4,6]
 ];
 
+/* ---------------- SCREEN CONTROL ---------------- */
 function show(id){
-  ["home-screen","game-screen","result-screen"]
-    .forEach(s=>document.getElementById(s).classList.add("hidden"));
+  ["home","game","result"].forEach(s =>
+    document.getElementById(s).classList.add("hidden")
+  );
   document.getElementById(id).classList.remove("hidden");
 }
 
+/* ---------------- GAME START ---------------- */
 function startGame(){
   board = ["","","","","","","","",""];
   gameActive = true;
-  show("game-screen");
-  document.getElementById("turn-indicator").innerText = "Your Turn (X)";
+  show("game");
+  document.getElementById("turn").innerText = "Your Turn (X)";
   initBoard();
 }
 
 function goHome(){
-  show("home-screen");
+  show("home");
 }
 
+/* ---------------- BOARD ---------------- */
 function initBoard(){
-  const b = document.getElementById("game-board");
-  b.innerHTML="";
+  const b = document.getElementById("board");
+  b.innerHTML = "";
   for(let i=0;i<9;i++){
-    const cell=document.createElement("div");
-    cell.className="game-cell aspect-square bg-[#1a1a2e] rounded-xl flex items-center justify-center text-4xl cursor-pointer";
-    cell.onclick=()=>handleClick(i,cell);
+    const cell = document.createElement("div");
+    cell.className = "cell aspect-square bg-[#1a1a2e] rounded-xl flex items-center justify-center text-4xl cursor-pointer";
+    cell.onclick = () => playerMove(i, cell);
     b.appendChild(cell);
   }
 }
 
-function handleClick(i,cell){
-  if(!gameActive || board[i]!="") return;
-  board[i]="X";
-  cell.innerText="X";
+/* ---------------- PLAYER MOVE ---------------- */
+function playerMove(i, cell){
+  if(!gameActive || board[i] !== "") return;
+
+  board[i] = "X";
+  cell.innerText = "X";
+  cell.classList.add("filled");
 
   if(checkEnd("X")) return;
 
-  document.getElementById("turn-indicator").innerText="AI Thinking...";
-  setTimeout(aiMove,500);
+  document.getElementById("turn").innerText = "AI Thinking...";
+  setTimeout(aiMove, 400);
 }
 
-/* -------- AI FUNCTION (MISSING PART – NOW FIXED) -------- */
+/* ---------------- HARD AI (MINIMAX) ---------------- */
 function aiMove(){
-  let empty=[];
-  board.forEach((v,i)=>{ if(v==="") empty.push(i); });
-  if(empty.length===0) return;
+  let bestScore = -Infinity;
+  let move;
 
-  const move = empty[Math.floor(Math.random()*empty.length)];
-  board[move]="O";
-  document.getElementById("game-board").children[move].innerText="O";
+  for(let i=0;i<9;i++){
+    if(board[i] === ""){
+      board[i] = "O";
+      let score = minimax(board, false);
+      board[i] = "";
+      if(score > bestScore){
+        bestScore = score;
+        move = i;
+      }
+    }
+  }
+
+  board[move] = "O";
+  const cell = document.getElementById("board").children[move];
+  cell.innerText = "O";
+  cell.classList.add("filled");
 
   if(checkEnd("O")) return;
-  document.getElementById("turn-indicator").innerText="Your Turn (X)";
+  document.getElementById("turn").innerText = "Your Turn (X)";
+}
+
+const scores = { X: -1, O: 1, tie: 0 };
+
+function minimax(boardState, isMaximizing){
+  let result = checkWinner();
+  if(result !== null) return scores[result];
+
+  if(isMaximizing){
+    let best = -Infinity;
+    for(let i=0;i<9;i++){
+      if(boardState[i] === ""){
+        boardState[i] = "O";
+        best = Math.max(best, minimax(boardState, false));
+        boardState[i] = "";
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for(let i=0;i<9;i++){
+      if(boardState[i] === ""){
+        boardState[i] = "X";
+        best = Math.min(best, minimax(boardState, true));
+        boardState[i] = "";
+      }
+    }
+    return best;
+  }
+}
+
+/* ---------------- RESULT CHECK ---------------- */
+function checkWinner(){
+  for(const [a,b,c] of winPatterns){
+    if(board[a] && board[a] === board[b] && board[a] === board[c]){
+      return board[a];
+    }
+  }
+  if(!board.includes("")) return "tie";
+  return null;
 }
 
 function checkEnd(player){
-  for(const [a,b,c] of winPatterns){
-    if(board[a]===player && board[b]===player && board[c]===player){
-      endGame(player==="X"?"You Win 🎉":"AI Wins 🤖");
-      return true;
-    }
-  }
-  if(!board.includes("")){
-    endGame("Draw 🤝");
+  let res = checkWinner();
+  if(res){
+    gameActive = false;
+    document.getElementById("resultText").innerText =
+      res === "tie" ? "Draw 🤝" : (res === "X" ? "You Win 🎉" : "AI Wins 🤖");
+    show("result");
     return true;
   }
   return false;
-}
-
-function endGame(text){
-  gameActive=false;
-  document.getElementById("result-title").innerText=text;
-  show("result-screen");
 }
 </script>
 
 </body>
 </html>
-
