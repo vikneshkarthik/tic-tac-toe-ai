@@ -1,140 +1,153 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tic Tac Toe AI</title>
+<title>X-O Game</title>
 
-<!-- Tailwind CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
 
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
-body{
-  background:#0f0f1a;
-  font-family: Arial, sans-serif;
-}
-.game-cell{
-  background:rgba(255,255,255,0.05);
-}
-.game-cell:hover{
-  background:rgba(99,102,241,0.15);
+* { font-family: 'Outfit', sans-serif; }
+.mono { font-family: 'Space Mono', monospace; }
+
+/* animations */
+@keyframes fadeIn {from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes scaleIn {from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
+@keyframes pulse {0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+
+.animate-fade-in { animation: fadeIn .6s ease-out forwards;}
+.animate-scale-in { animation: scaleIn .4s ease-out forwards;}
+.animate-pulse-slow { animation: pulse 2s ease-in-out infinite;}
+
+.game-cell:hover:not(.filled){
+  background: rgba(99,102,241,0.1);
 }
 </style>
 </head>
 
-<body class="flex items-center justify-center min-h-screen text-white">
+<body class="h-full" style="background:#0f0f1a;">
 
-<div class="text-center">
+<!-- HOME SCREEN -->
+<div id="home-screen" class="h-full flex flex-col items-center justify-center">
 
-<h1 class="text-4xl font-bold mb-8">TIC TAC TOE</h1>
+<h1 class="mono text-5xl font-bold text-white mb-4">TIC TAC TOE</h1>
+<p class="text-slate-400 mb-10">Player vs AI Challenge</p>
 
-<div id="home-screen">
-  <button onclick="startGame()"
-  class="px-8 py-3 bg-indigo-600 rounded-full hover:scale-105 transition">
-  Start Game
-  </button>
+<button onclick="startGame()"
+class="px-12 py-4 rounded-full text-lg font-semibold animate-pulse-slow"
+style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;">
+Start Game
+</button>
+
 </div>
 
-<div id="game-screen" class="hidden">
-  <div id="board" class="grid grid-cols-3 gap-3 w-72 mx-auto mb-6"></div>
-  <button onclick="goHome()" class="px-6 py-2 bg-gray-700 rounded">Home</button>
+<!-- GAME SCREEN -->
+<div id="game-screen" class="hidden h-full flex flex-col items-center justify-center">
+
+<div id="game-board" class="grid grid-cols-3 gap-3 mb-8"></div>
+
+<button onclick="goHome()" class="text-slate-400">Back</button>
+
 </div>
 
-<div id="result" class="hidden mt-6 text-xl font-semibold"></div>
-
+<!-- RESULT -->
+<div id="result-screen" class="hidden h-full flex flex-col items-center justify-center text-center">
+<h2 id="result-title" class="text-5xl font-bold text-white mb-6"></h2>
+<button onclick="startGame()" class="px-10 py-4 rounded-full text-white"
+style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+Play Again
+</button>
 </div>
 
 <script>
-let board = ["","","","","","","","",""];
-let gameActive = false;
+let board=['','','','','','','','',''];
+let gameActive=false;
 
-const winPatterns = [
+const winPatterns=[
 [0,1,2],[3,4,5],[6,7,8],
 [0,3,6],[1,4,7],[2,5,8],
 [0,4,8],[2,4,6]
 ];
 
-function startGame(){
-  board = ["","","","","","","","",""];
-  gameActive = true;
-  document.getElementById("home-screen").classList.add("hidden");
-  document.getElementById("result").classList.add("hidden");
-  document.getElementById("game-screen").classList.remove("hidden");
-  initBoard();
+function showScreen(id){
+document.querySelectorAll('#home-screen,#game-screen,#result-screen')
+.forEach(s=>s.classList.add('hidden'));
+document.getElementById(id).classList.remove('hidden');
 }
 
-function goHome(){
-  document.getElementById("game-screen").classList.add("hidden");
-  document.getElementById("home-screen").classList.remove("hidden");
+function goHome(){showScreen('home-screen');}
+
+function startGame(){
+board=['','','','','','','','',''];
+gameActive=true;
+initBoard();
+showScreen('game-screen');
 }
 
 function initBoard(){
-  const boardEl = document.getElementById("board");
-  boardEl.innerHTML="";
-  for(let i=0;i<9;i++){
-    const cell=document.createElement("div");
-    cell.className="game-cell w-20 h-20 flex items-center justify-center text-3xl font-bold cursor-pointer rounded";
-    cell.onclick=()=>handleClick(i);
-    boardEl.appendChild(cell);
-  }
+const el=document.getElementById('game-board');
+el.innerHTML='';
+for(let i=0;i<9;i++){
+const cell=document.createElement('div');
+cell.className='game-cell w-20 h-20 rounded-xl flex items-center justify-center text-3xl text-white cursor-pointer';
+cell.dataset.index=i;
+cell.onclick=()=>clickCell(i);
+el.appendChild(cell);
+}
 }
 
-function handleClick(i){
-  if(!gameActive || board[i]!="") return;
+function clickCell(i){
+if(!gameActive||board[i]!="")return;
 
-  board[i]="X";
-  updateBoard();
-  if(checkEnd()) return;
+makeMove(i,'X');
+if(checkEnd())return;
 
-  setTimeout(()=>{
-    aiMove();
-    updateBoard();
-    checkEnd();
-  },300);
+setTimeout(()=>{
+let move=getRandomMove();
+makeMove(move,'O');
+checkEnd();
+},400);
 }
 
-function aiMove(){
-  let empty=board.map((v,i)=>v==""?i:null).filter(v=>v!=null);
-  if(empty.length==0) return;
-  let move=empty[Math.floor(Math.random()*empty.length)];
-  board[move]="O";
+function makeMove(i,p){
+board[i]=p;
+document.querySelector(`[data-index="${i}"]`).textContent=p;
 }
 
-function updateBoard(){
-  const cells=document.querySelectorAll(".game-cell");
-  cells.forEach((cell,i)=>{
-    cell.textContent=board[i];
-  });
+function getRandomMove(){
+let empty=board.map((v,i)=>v==''?i:null).filter(v=>v!=null);
+return empty[Math.floor(Math.random()*empty.length)];
 }
 
 function checkWinner(){
-  for(let pattern of winPatterns){
-    const [a,b,c]=pattern;
-    if(board[a] && board[a]==board[b] && board[a]==board[c]){
-      return board[a];
-    }
-  }
-  return null;
+for(let p of winPatterns){
+let[a,b,c]=p;
+if(board[a]&&board[a]==board[b]&&board[a]==board[c]) return board[a];
+}
+return null;
 }
 
 function checkEnd(){
-  let winner=checkWinner();
-  if(winner){
-    gameActive=false;
-    showResult(winner=="X"?"You Win!":"AI Wins!");
-    return true;
-  }
-  if(!board.includes("")){
-    gameActive=false;
-    showResult("Draw!");
-    return true;
-  }
-  return false;
+let w=checkWinner();
+if(w){
+gameActive=false;
+showResult(w=="X"?"You Win!":"AI Wins!");
+return true;
+}
+if(!board.includes('')){
+gameActive=false;
+showResult("Draw!");
+return true;
+}
+return false;
 }
 
 function showResult(msg){
-  document.getElementById("result").textContent=msg;
-  document.getElementById("result").classList.remove("hidden");
+document.getElementById('result-title').textContent=msg;
+showScreen('result-screen');
 }
 </script>
 
